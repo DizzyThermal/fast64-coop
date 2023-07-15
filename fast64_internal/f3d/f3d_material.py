@@ -122,6 +122,8 @@ enumF3DSource = [
 defaultMaterialPresets = {
     "Shaded Solid": {"SM64": "Shaded Solid", "OOT": "oot_shaded_solid"},
     "Shaded Texture": {"SM64": "Shaded Texture", "OOT": "oot_shaded_texture"},
+    "sm64_lightmap_texture": {"SM64": "sm64_lightmap_texture", "OOT": "sm64_lightmap_texture"},
+    "sm64_lightmap_fog_texture": {"SM64": "sm64_lightmap_fog_texture", "OOT": "sm64_lightmap_fog_texture"},
 }
 
 
@@ -236,6 +238,8 @@ def isTexturePointSampled(material):
 
 def isLightingDisabled(material):
     f3dMat = material.f3d_mat
+    if f3dMat.rdp_settings.g_light_map:
+        return True
     return not f3dMat.rdp_settings.g_lighting
 
 
@@ -413,6 +417,7 @@ def ui_geo_mode(settings, dataHolder, layout, useDropdown):
         inputGroup.prop(settings, "g_tex_gen", text="Texture UV Generate")
         inputGroup.prop(settings, "g_tex_gen_linear", text="Texture UV Generate Linear")
         inputGroup.prop(settings, "g_shade_smooth", text="Smooth Shading")
+        inputGroup.prop(settings, "g_light_map", text="Light Map")
         if bpy.context.scene.f3d_type == "F3DEX_GBI_2" or bpy.context.scene.f3d_type == "F3DEX_GBI":
             inputGroup.prop(settings, "g_clipping", text="Clipping")
 
@@ -1981,12 +1986,15 @@ def addColorAttributesToModel(obj: bpy.types.Object):
         bpy.ops.object.mode_set(mode=get_mode_set_from_context_mode(prevMode))
 
 
-def createF3DMat(obj: bpy.types.Object | None, preset="Shaded Solid", index=None):
+def createF3DMat(obj: bpy.types.Object | None, preset="Shaded Solid", index=None, lightmap=False):
     # link all node_groups + material from addon's data .blend
     link_f3d_material_library()
 
     # beefwashere is a linked material containing the default layout for all the linked node_groups
     mat = bpy.data.materials["beefwashere"]
+    if lightmap:
+        mat = bpy.data.materials["beefwashere_lightmap"]
+
     # duplicate and rename the linked material
     material = mat.copy()
     material.name = "f3dlite_material"
@@ -2585,6 +2593,12 @@ class RDPSettings(bpy.types.PropertyGroup):
         update=update_node_values_with_preset,
         description="Shades primitive smoothly using interpolation between shade values for each vertex (Gouraud shading)"
     )
+    g_light_map: bpy.props.BoolProperty(
+        name="Light Map",
+        default=False,
+        update=update_node_values_with_preset,
+        description="Uses vertex colors as a light map"
+    )
     # f3dlx2 only
     g_clipping: bpy.props.BoolProperty(
         name="Clipping",
@@ -2837,6 +2851,7 @@ class RDPSettings(bpy.types.PropertyGroup):
             self.g_tex_gen,
             self.g_tex_gen_linear,
             self.g_shade_smooth,
+            self.g_light_map,
             self.g_clipping,
             self.g_mdsft_alpha_dither,
             self.g_mdsft_rgb_dither,

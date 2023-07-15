@@ -174,7 +174,7 @@ def convertF3DtoNewVersion(obj: bpy.types.Object | bpy.types.Bone, index, materi
         print(exc)
 
 
-def convertAllBSDFtoF3D(objs, renameUV):
+def convertAllBSDFtoF3D(objs, renameUV, lightmap_info = None):
     # Dict of non-f3d materials : converted f3d materials
     # handles cases where materials are used in multiple objects
     materialDict = {}
@@ -190,12 +190,12 @@ def convertAllBSDFtoF3D(objs, renameUV):
                     obj.material_slots[index].material = materialDict[material]
                 else:
                     print("New material")
-                    convertBSDFtoF3D(obj, index, material, materialDict)
+                    convertBSDFtoF3D(obj, index, material, materialDict, lightmap_info)
 
 
-def convertBSDFtoF3D(obj, index, material, materialDict):
+def convertBSDFtoF3D(obj, index, material, materialDict, lightmap_info = None):
     if not material.use_nodes:
-        newMaterial = createF3DMat(obj, preset="Shaded Solid", index=index)
+        newMaterial = createF3DMat(obj, preset="Shaded Solid", index=index, lightmap=(lightmap_info != None))
         f3dMat = newMaterial.f3d_mat if newMaterial.mat_ver > 3 else newMaterial
         f3dMat.default_light_color = material.diffuse_color
         updateMatWithName(newMaterial, material, materialDict)
@@ -204,7 +204,7 @@ def convertBSDFtoF3D(obj, index, material, materialDict):
         tex0Node = material.node_tree.nodes["Principled BSDF"].inputs["Base Color"]
         tex1Node = material.node_tree.nodes["Principled BSDF"].inputs["Subsurface Color"]
         if len(tex0Node.links) == 0:
-            newMaterial = createF3DMat(obj, preset=getDefaultMaterialPreset("Shaded Solid"), index=index)
+            newMaterial = createF3DMat(obj, preset=getDefaultMaterialPreset("Shaded Solid"), index=index, lightmap=(lightmap_info != None))
             f3dMat = newMaterial.f3d_mat if newMaterial.mat_ver > 3 else newMaterial
             f3dMat.default_light_color = tex0Node.default_value
             updateMatWithName(newMaterial, material, materialDict)
@@ -221,14 +221,23 @@ def convertBSDFtoF3D(obj, index, material, materialDict):
                             + presetName
                             + "' was not found in material preset enum list."
                         )
+                elif lightmap_info != None:
+                    presetName = getDefaultMaterialPreset(lightmap_info['material'])
                 else:
                     presetName = getDefaultMaterialPreset("Shaded Texture")
-                newMaterial = createF3DMat(obj, preset=presetName, index=index)
+                newMaterial = createF3DMat(obj, preset=presetName, index=index, lightmap=(lightmap_info != None))
                 f3dMat = newMaterial.f3d_mat if newMaterial.mat_ver > 3 else newMaterial
                 f3dMat.tex0.tex = tex0Node.links[0].from_node.image
-                if len(tex1Node.links) > 0 and isinstance(tex1Node.links[0].from_node, bpy.types.ShaderNodeTexImage):
+
+                if lightmap_info != None:
+                    f3dMat.tex1.tex = lightmap_info['tex']
+                elif len(tex1Node.links) > 0 and isinstance(tex1Node.links[0].from_node, bpy.types.ShaderNodeTexImage):
                     f3dMat.tex1.tex = tex1Node.links[0].from_node.image
+
                 updateMatWithName(newMaterial, material, materialDict)
+
+                if lightmap_info != None:
+                    newMaterial.node_tree.nodes["LightmapUV"].uv_map = lightmap_info['uv']
             else:
                 print("Principled BSDF material does not have an Image Node attached to its Base Color.")
     else:
