@@ -1,4 +1,4 @@
-# Fast64
+# Fast64 for sm64ex-coop
 
 This requires Blender 3.2+.
 
