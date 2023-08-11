@@ -324,12 +324,12 @@ class LevelScript:
         for actorInclude in self.actorIncludes:
             result += actorInclude + "\n"
 
-        result += f"\n{self.get_persistent_block(PersistentBlocks.includes)}\n\n"
+        # result += f"\n{self.get_persistent_block(PersistentBlocks.includes)}\n\n"
 
         result += '#include "make_const_nonconst.h"\n'
         result += '#include "levels/' + self.name + '/header.h"\n\n'
 
-        result += f"{self.get_persistent_block(PersistentBlocks.scripts)}\n\n"
+        # result += f"{self.get_persistent_block(PersistentBlocks.scripts)}\n\n"
 
         result += "const LevelScript level_" + self.name + "_entry[] = {\n"
         result += "\tINIT_LEVEL(),\n"
@@ -343,7 +343,7 @@ class LevelScript:
             result += "\t" + macroToString(modelLoad, True) + "\n"
         result += "\n"
 
-        result += f"{self.get_persistent_block(PersistentBlocks.levelCommands, nTabs=1)}\n\n"
+        # result += f"{self.get_persistent_block(PersistentBlocks.levelCommands, nTabs=1)}\n\n"
 
         result += areaString
 
@@ -646,7 +646,7 @@ def parseLevelScript(filepath, levelName):
         elif macroCmd[0] == "END_AREA":
             inArea = False
 
-    parseLevelPersistentBlocks(scriptData, levelscript)
+    # parseLevelPersistentBlocks(scriptData, levelscript)
     return levelscript
 
 
@@ -708,7 +708,7 @@ def exportLevelC(
     else:
         levelDir = os.path.join(exportDir, "levels/" + levelName)
 
-    if customExport or not os.path.exists(os.path.join(levelDir, "script.c")):
+    if not os.path.exists(os.path.join(levelDir, "script.c")):
         prevLevelScript = LevelScript(levelName)
     else:
         prevLevelScript = parseLevelScript(levelDir, levelName)
