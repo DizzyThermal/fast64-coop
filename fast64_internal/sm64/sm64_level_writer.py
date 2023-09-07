@@ -698,7 +698,7 @@ class SM64OptionalFileStatus:
 
 
 def exportLevelC(
-    obj, transformMatrix, f3dType, isHWv1, levelName, exportDir, savePNG, customExport, levelCameraVolumeName, DLFormat
+    obj, transformMatrix, f3dType, isHWv1, levelName, exportDir, exportAreas, savePNG, customExport, levelCameraVolumeName, DLFormat
 ):
 
     fileStatus = SM64OptionalFileStatus()
@@ -730,6 +730,13 @@ def exportLevelC(
     if len(childAreas) == 0:
         raise PluginError("The level root has no child empties with the 'Area Root' object type.")
 
+    areasToExport = [area.areaIndex for area in childAreas]
+    if exportAreas.lower().strip() != 'all':
+        areaWhiteList = [int(x.strip()) for x in exportAreas.split(',')]
+        for i in range(len(areasToExport) - 1, -1, -1):
+            if areasToExport[i] not in areaWhiteList:
+                del areasToExport[i]
+
     usesEnvFX = False
     echoLevels = ["0x00", "0x00", "0x00"]
     zoomFlags = [False, False, False, False]
@@ -742,6 +749,8 @@ def exportLevelC(
             raise PluginError("Area for " + child.name + " has no children.")
         if child.areaIndex in areaDict:
             raise PluginError(child.name + " shares the same area index as " + areaDict[child.areaIndex].name)
+        if child.areaIndex not in areasToExport:
+            continue
         # if child.areaCamera is None:
         #    raise PluginError(child.name + ' does not have an area camera set.')
         # setOrigin(obj, child)
@@ -1185,6 +1194,7 @@ class SM64_ExportLevel(ObjectDataExporter):
                 context.scene.isHWv1,
                 levelName,
                 exportPath,
+                context.scene.levelAreas,
                 context.scene.saveTextures,
                 context.scene.levelCustomExport,
                 triggerName,
@@ -1230,6 +1240,7 @@ class SM64_ExportLevelPanel(SM64_Panel):
         if context.scene.levelCustomExport:
             prop_split(col, context.scene, "levelExportPath", "Directory")
             prop_split(col, context.scene, "levelName", "Name")
+            prop_split(col, context.scene, "levelAreas", "Areas")
             customExportWarning(col)
         else:
             col.prop(context.scene, "levelOption")
@@ -1271,6 +1282,8 @@ def sm64_level_register():
     bpy.types.Scene.levelOption = bpy.props.EnumProperty(name="Level", items=enumLevelNames, default="bob")
     bpy.types.Scene.levelExportPath = bpy.props.StringProperty(name="Directory", subtype="FILE_PATH")
     bpy.types.Scene.levelCustomExport = bpy.props.BoolProperty(name="Custom Export Path")
+    bpy.types.Scene.levelAreas = bpy.props.StringProperty(name="Areas to Export", default="all",
+                                                          description="(e.g., 'all' '1,3')")
 
 
 def sm64_level_unregister():
@@ -1281,3 +1294,4 @@ def sm64_level_unregister():
     del bpy.types.Scene.levelExportPath
     del bpy.types.Scene.levelCustomExport
     del bpy.types.Scene.levelOption
+    del bpy.types.Scene.levelAreas
