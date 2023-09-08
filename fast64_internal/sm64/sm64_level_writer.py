@@ -1211,6 +1211,12 @@ class SM64_ExportLevel(ObjectDataExporter):
                 DLFormat.Static,
             )
 
+            if context.scene.levelDeleteOldLevel:
+                # Delete old *.lvl if exists
+                oldLevel = os.path.join(exportPath, f'level_{levelName}_entry.lvl')
+                if os.path.exists(oldLevel):
+                    os.remove(oldLevel)
+
             cameraWarning(self, fileStatus)
             starSelectWarning(self, fileStatus)
 
@@ -1252,6 +1258,7 @@ class SM64_ExportLevelPanel(SM64_Panel):
             prop_split(col, context.scene, "levelName", "Name")
             prop_split(col, context.scene, "levelAreas", "Areas")
             prop_split(col, context.scene, "levelCollisionOverride", "Collision Override")
+            prop_split(col, context.scene, "levelDeleteOldLevel", "Delete Old Level")
             customExportWarning(col)
         else:
             col.prop(context.scene, "levelOption")
@@ -1297,6 +1304,7 @@ def sm64_level_register():
                                                           description="(e.g., 'all' '1,3')")
     bpy.types.Scene.levelCollisionOverride = bpy.props.StringProperty(name='Collision Override', default='',
                                                                       description='Type when collisionType is coop-incompatible (i.e., *SPECFLAG*)')
+    bpy.types.Scene.levelDeleteOldLevel = bpy.props.BoolProperty(name="Delete Old *.lvl in Custom Export Path", default=True)
 
 
 def sm64_level_unregister():
@@ -1309,3 +1317,4 @@ def sm64_level_unregister():
     del bpy.types.Scene.levelOption
     del bpy.types.Scene.levelAreas
     del bpy.types.Scene.levelCollisionOverride
+    del bpy.types.Scene.levelDeleteOldLevel
