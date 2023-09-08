@@ -1,4 +1,4 @@
-import bpy, os, math, re, shutil, mathutils
+import bpy, os, math, re, shutil, subprocess, mathutils
 from collections import defaultdict
 from bpy.utils import register_class, unregister_class
 from ..panels import SM64_Panel
@@ -1217,6 +1217,9 @@ class SM64_ExportLevel(ObjectDataExporter):
                 if os.path.exists(oldLevel):
                     os.remove(oldLevel)
 
+            if context.scene.levelPostCommand:
+                subprocess.Popen([context.scene.levelPostCommand], shell=True])
+
             cameraWarning(self, fileStatus)
             starSelectWarning(self, fileStatus)
 
@@ -1259,6 +1262,7 @@ class SM64_ExportLevelPanel(SM64_Panel):
             prop_split(col, context.scene, "levelAreas", "Areas")
             prop_split(col, context.scene, "levelCollisionOverride", "Collision Override")
             prop_split(col, context.scene, "levelDeleteOldLevel", "Delete Old Level")
+            prop_split(col, context.scene, "levelPostCommand", "Post-Command")
             customExportWarning(col)
         else:
             col.prop(context.scene, "levelOption")
@@ -1302,9 +1306,11 @@ def sm64_level_register():
     bpy.types.Scene.levelCustomExport = bpy.props.BoolProperty(name="Custom Export Path")
     bpy.types.Scene.levelAreas = bpy.props.StringProperty(name="Areas to Export", default="all",
                                                           description="(e.g., 'all' '1,3')")
-    bpy.types.Scene.levelCollisionOverride = bpy.props.StringProperty(name='Collision Override', default='',
-                                                                      description='Type when collisionType is coop-incompatible (i.e., *SPECFLAG*)')
+    bpy.types.Scene.levelCollisionOverride = bpy.props.StringProperty(name="Collision Override", default="",
+                                                                      description="Type when collisionType is coop-incompatible (i.e., *SPECFLAG*)")
     bpy.types.Scene.levelDeleteOldLevel = bpy.props.BoolProperty(name="Delete Old *.lvl in Custom Export Path", default=True)
+    bpy.types.Scene.levelPostCommand = bpy.props.StringProperty(name="Post-Command", default="",
+                                                                description="Command to run after export is complete")
 
 
 def sm64_level_unregister():
@@ -1318,3 +1324,4 @@ def sm64_level_unregister():
     del bpy.types.Scene.levelAreas
     del bpy.types.Scene.levelCollisionOverride
     del bpy.types.Scene.levelDeleteOldLevel
+    del bpy.types.Scene.levelPostCommand
