@@ -1218,7 +1218,7 @@ class SM64_ExportLevel(ObjectDataExporter):
                     os.remove(oldLevel)
 
             if context.scene.levelPostCommand:
-                subprocess.Popen([context.scene.levelPostCommand], shell=True])
+                subprocess.Popen([context.scene.levelPostCommand], shell=True)
 
             cameraWarning(self, fileStatus)
             starSelectWarning(self, fileStatus)
