@@ -1,4 +1,4 @@
-import bpy, os, math, re, shutil, mathutils
+import bpy, os, math, re, shutil, subprocess, mathutils
 from collections import defaultdict
 from bpy.utils import register_class, unregister_class
 from ..panels import SM64_Panel
@@ -698,7 +698,7 @@ class SM64OptionalFileStatus:
 
 
 def exportLevelC(
-    obj, transformMatrix, f3dType, isHWv1, levelName, exportDir, savePNG, customExport, levelCameraVolumeName, DLFormat
+    obj, transformMatrix, f3dType, isHWv1, levelName, exportDir, exportAreas, exportCollisionOverride, savePNG, customExport, levelCameraVolumeName, DLFormat
 ):
 
     fileStatus = SM64OptionalFileStatus()
@@ -730,6 +730,13 @@ def exportLevelC(
     if len(childAreas) == 0:
         raise PluginError("The level root has no child empties with the 'Area Root' object type.")
 
+    areasToExport = [area.areaIndex for area in childAreas]
+    if exportAreas.lower().strip() != 'all':
+        areaWhiteList = [int(x.strip()) for x in exportAreas.split(',')]
+        for i in range(len(areasToExport) - 1, -1, -1):
+            if areasToExport[i] not in areaWhiteList:
+                del areasToExport[i]
+
     usesEnvFX = False
     echoLevels = ["0x00", "0x00", "0x00"]
     zoomFlags = [False, False, False, False]
@@ -742,6 +749,8 @@ def exportLevelC(
             raise PluginError("Area for " + child.name + " has no children.")
         if child.areaIndex in areaDict:
             raise PluginError(child.name + " shares the same area index as " + areaDict[child.areaIndex].name)
+        if child.areaIndex not in areasToExport:
+            continue
         # if child.areaCamera is None:
         #    raise PluginError(child.name + ' does not have an area camera set.')
         # setOrigin(obj, child)
@@ -787,7 +796,7 @@ def exportLevelC(
 
         # Write collision
         collision = exportCollisionCommon(
-            child, transformMatrix, True, True, levelName + "_" + areaName, child.areaIndex
+            child, transformMatrix, True, True, levelName + "_" + areaName, child.areaIndex, exportCollisionOverride
         )
         collisionC = collision.to_c()
         colFile = open(os.path.join(areaDir, "collision.inc.c"), "w", newline="\n")
@@ -1151,7 +1160,16 @@ class SM64_ExportLevel(ObjectDataExporter):
                         if obj.data is None and obj.sm64_obj_type == "Level Root":
                             break
                 if obj is None or obj.sm64_obj_type != "Level Root":
-                    raise PluginError("Cannot find level empty.")
+                    # Try to find Level Object
+                    for _obj in bpy.data.objects:
+                        if hasattr(_obj, 'sm64_obj_type') and _obj.sm64_obj_type == "Level Root":
+                            obj = _obj
+                            break
+
+                    # Recheck if obj isn't a Level Root
+                    if obj is None or obj.sm64_obj_type != "Level Root":
+                        raise PluginError("Cannot find Level Root in Scene.")
+
                 selectSingleObject(obj)
 
             scaleValue = bpy.context.scene.blenderToSM64Scale
@@ -1185,11 +1203,22 @@ class SM64_ExportLevel(ObjectDataExporter):
                 context.scene.isHWv1,
                 levelName,
                 exportPath,
+                context.scene.levelAreas,
+                context.scene.levelCollisionOverride,
                 context.scene.saveTextures,
                 context.scene.levelCustomExport,
                 triggerName,
                 DLFormat.Static,
             )
+
+            if context.scene.levelDeleteOldLevel:
+                # Delete old *.lvl if exists
+                oldLevel = os.path.join(exportPath, f'level_{levelName}_entry.lvl')
+                if os.path.exists(oldLevel):
+                    os.remove(oldLevel)
+
+            if context.scene.levelPostCommand:
+                subprocess.Popen([context.scene.levelPostCommand], shell=True)
 
             cameraWarning(self, fileStatus)
             starSelectWarning(self, fileStatus)
@@ -1230,6 +1259,10 @@ class SM64_ExportLevelPanel(SM64_Panel):
         if context.scene.levelCustomExport:
             prop_split(col, context.scene, "levelExportPath", "Directory")
             prop_split(col, context.scene, "levelName", "Name")
+            prop_split(col, context.scene, "levelAreas", "Areas")
+            prop_split(col, context.scene, "levelCollisionOverride", "Collision Override")
+            prop_split(col, context.scene, "levelDeleteOldLevel", "Delete Old Level")
+            prop_split(col, context.scene, "levelPostCommand", "Post-Command")
             customExportWarning(col)
         else:
             col.prop(context.scene, "levelOption")
@@ -1271,6 +1304,13 @@ def sm64_level_register():
     bpy.types.Scene.levelOption = bpy.props.EnumProperty(name="Level", items=enumLevelNames, default="bob")
     bpy.types.Scene.levelExportPath = bpy.props.StringProperty(name="Directory", subtype="FILE_PATH")
     bpy.types.Scene.levelCustomExport = bpy.props.BoolProperty(name="Custom Export Path")
+    bpy.types.Scene.levelAreas = bpy.props.StringProperty(name="Areas to Export", default="all",
+                                                          description="(e.g., 'all' '1,3')")
+    bpy.types.Scene.levelCollisionOverride = bpy.props.StringProperty(name="Collision Override", default="",
+                                                                      description="Type when collisionType is coop-incompatible (i.e., *SPECFLAG*)")
+    bpy.types.Scene.levelDeleteOldLevel = bpy.props.BoolProperty(name="Delete Old *.lvl in Custom Export Path", default=True)
+    bpy.types.Scene.levelPostCommand = bpy.props.StringProperty(name="Post-Command", default="",
+                                                                description="Command to run after export is complete")
 
 
 def sm64_level_unregister():
@@ -1281,3 +1321,7 @@ def sm64_level_unregister():
     del bpy.types.Scene.levelExportPath
     del bpy.types.Scene.levelCustomExport
     del bpy.types.Scene.levelOption
+    del bpy.types.Scene.levelAreas
+    del bpy.types.Scene.levelCollisionOverride
+    del bpy.types.Scene.levelDeleteOldLevel
+    del bpy.types.Scene.levelPostCommand
