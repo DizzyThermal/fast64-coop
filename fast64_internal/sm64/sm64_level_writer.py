@@ -1160,7 +1160,16 @@ class SM64_ExportLevel(ObjectDataExporter):
                         if obj.data is None and obj.sm64_obj_type == "Level Root":
                             break
                 if obj is None or obj.sm64_obj_type != "Level Root":
-                    raise PluginError("Cannot find level empty.")
+                    # Try to find Level Object
+                    for _obj in bpy.data.objects:
+                        if hasattr(_obj, 'sm64_obj_type') and _obj.sm64_obj_type == "Level Root":
+                            obj = _obj
+                            break
+
+                    # Recheck if obj isn't a Level Root
+                    if obj is None or obj.sm64_obj_type != "Level Root":
+                        raise PluginError("Cannot find Level Root in Scene.")
+
                 selectSingleObject(obj)
 
             scaleValue = bpy.context.scene.blenderToSM64Scale
