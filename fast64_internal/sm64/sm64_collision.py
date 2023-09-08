@@ -110,6 +110,7 @@ class Collision:
         self.triangles = {}
         self.specials = []
         self.water_boxes = []
+        self.incompatibleCollisionOverride = None
 
     def set_addr(self, startAddress):
         startAddress = get64bitAlignedAddr(startAddress)
@@ -133,6 +134,8 @@ class Collision:
         for vertex in self.vertices:
             data.source += "\t" + vertex.to_c()
         for collisionType, triangles in self.triangles.items():
+            if self.incompatibleCollisionOverride and 'SPECFLAG' in collisionType:
+                collisionType = self.incompatibleCollisionOverride
             data.source += "\tCOL_TRI_INIT(" + collisionType + ", " + str(len(triangles)) + "),\n"
             for triangle in triangles:
                 data.source += "\t" + triangle.to_c()
@@ -374,7 +377,7 @@ def exportCollisionInsertableBinary(obj, transformMatrix, filepath, includeSpeci
     return data
 
 
-def exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren, name, areaIndex):
+def exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren, name, areaIndex, exportCollisionOverride):
     bpy.ops.object.select_all(action="DESELECT")
     obj.select_set(True)
 
@@ -394,6 +397,7 @@ def exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren
         raise Exception(str(e))
 
     collision = Collision(toAlnum(name) + "_collision")
+    collision.incompatibleCollisionOverride = exportCollisionOverride
     for collisionType, faces in collisionDict.items():
         collision.triangles[collisionType] = []
         for (faceVerts, specialParam, room) in faces:

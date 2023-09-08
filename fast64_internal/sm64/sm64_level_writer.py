@@ -698,7 +698,7 @@ class SM64OptionalFileStatus:
 
 
 def exportLevelC(
-    obj, transformMatrix, f3dType, isHWv1, levelName, exportDir, exportAreas, savePNG, customExport, levelCameraVolumeName, DLFormat
+    obj, transformMatrix, f3dType, isHWv1, levelName, exportDir, exportAreas, exportCollisionOverride, savePNG, customExport, levelCameraVolumeName, DLFormat
 ):
 
     fileStatus = SM64OptionalFileStatus()
@@ -796,7 +796,7 @@ def exportLevelC(
 
         # Write collision
         collision = exportCollisionCommon(
-            child, transformMatrix, True, True, levelName + "_" + areaName, child.areaIndex
+            child, transformMatrix, True, True, levelName + "_" + areaName, child.areaIndex, exportCollisionOverride
         )
         collisionC = collision.to_c()
         colFile = open(os.path.join(areaDir, "collision.inc.c"), "w", newline="\n")
@@ -1204,6 +1204,7 @@ class SM64_ExportLevel(ObjectDataExporter):
                 levelName,
                 exportPath,
                 context.scene.levelAreas,
+                context.scene.levelCollisionOverride,
                 context.scene.saveTextures,
                 context.scene.levelCustomExport,
                 triggerName,
@@ -1250,6 +1251,7 @@ class SM64_ExportLevelPanel(SM64_Panel):
             prop_split(col, context.scene, "levelExportPath", "Directory")
             prop_split(col, context.scene, "levelName", "Name")
             prop_split(col, context.scene, "levelAreas", "Areas")
+            prop_split(col, context.scene, "levelCollisionOverride", "Collision Override")
             customExportWarning(col)
         else:
             col.prop(context.scene, "levelOption")
@@ -1293,6 +1295,8 @@ def sm64_level_register():
     bpy.types.Scene.levelCustomExport = bpy.props.BoolProperty(name="Custom Export Path")
     bpy.types.Scene.levelAreas = bpy.props.StringProperty(name="Areas to Export", default="all",
                                                           description="(e.g., 'all' '1,3')")
+    bpy.types.Scene.levelCollisionOverride = bpy.props.StringProperty(name='Collision Override', default='',
+                                                                      description='Type when collisionType is coop-incompatible (i.e., *SPECFLAG*)')
 
 
 def sm64_level_unregister():
@@ -1304,3 +1308,4 @@ def sm64_level_unregister():
     del bpy.types.Scene.levelCustomExport
     del bpy.types.Scene.levelOption
     del bpy.types.Scene.levelAreas
+    del bpy.types.Scene.levelCollisionOverride
