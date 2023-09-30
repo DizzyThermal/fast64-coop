@@ -277,7 +277,7 @@ class SM64ObjectPanel(bpy.types.Panel):
 
 
 def exportCollisionBinary(obj, transformMatrix, romfile, startAddress, endAddress, includeSpecials, includeChildren):
-    collision = exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren, obj.name, None)
+    collision = exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren, obj.name, None, None)
     start, end = collision.set_addr(startAddress)
     if end > endAddress:
         raise PluginError("Size too big: Data ends at " + hex(end) + ", which is larger than the specified range.")
@@ -310,7 +310,7 @@ def exportCollisionC(
     colPath = os.path.join(colDirPath, "collision.inc.c")
 
     fileObj = open(colPath, "w", newline="\n")
-    collision = exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren, name, None)
+    collision = exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren, name, None, None)
     collisionC = collision.to_c()
     fileObj.write(collisionC.source)
     fileObj.close()
@@ -362,7 +362,7 @@ def exportCollisionC(
 
 
 def exportCollisionInsertableBinary(obj, transformMatrix, filepath, includeSpecials, includeChildren):
-    collision = exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren, obj.name, None)
+    collision = exportCollisionCommon(obj, transformMatrix, includeSpecials, includeChildren, obj.name, None, None)
     start, end = collision.set_addr(0)
     if end > 0xFFFFFF:
         raise PluginError("Size too big: Data ends at " + hex(end) + ", which is larger than the specified range.")
